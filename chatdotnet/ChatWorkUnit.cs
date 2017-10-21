@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Collections.Generic;
 
 namespace chatdotnet
 {
@@ -11,25 +10,14 @@ namespace chatdotnet
         Message // user wants to send a message
     }
 
-    // callbacks
-    internal delegate void SuccessCallback(bool success, List<Chat> chats);
-    internal delegate void NewChatCallback(bool success);
-    internal delegate void SubscribeCallback(bool success, List<Message> msgs);
-    internal delegate void MessageCallback(Message msg);
-
     // base class
     class ChatWorkUnit
     {
-        protected readonly ChatWorkUnitType type;
+        internal readonly ChatWorkUnitType type;
 
         internal ChatWorkUnit(ChatWorkUnitType t)
         {
             type = t;
-        }
-
-        internal ChatWorkUnitType Type
-        {
-            get { return type; }
         }
     }
 
@@ -39,16 +27,17 @@ namespace chatdotnet
 
         internal readonly string target; // url of server
         internal readonly string name; // name of user
-        internal readonly SuccessCallback successCallback;
+        internal readonly ConnectCallback connectCallback;
 
-        internal ChatWorkUnitConnect(string t, string n, SuccessCallback sc) : base(ChatWorkUnitType.Connect)
+        internal ChatWorkUnitConnect(string t, string n, ConnectCallback cc) : base(ChatWorkUnitType.Connect)
         {
             target = t;
             name = n;
-            successCallback = sc;
+            connectCallback = cc;
         }
     }
 
+    // implements ChatWorkUnit.NewChat
     class ChatWorkUnitNewChat : ChatWorkUnit
     {
         internal readonly string name; // name of new chat
@@ -63,6 +52,7 @@ namespace chatdotnet
         }
     }
 
+    // implements ChatWorkUnit.Subscribe
     class ChatWorkUnitSubscribe : ChatWorkUnit
     {
         internal readonly string name; // name of chat
@@ -77,6 +67,7 @@ namespace chatdotnet
         }
     }
 
+    // implements ChatWorkUnit.Message
     class ChatWorkUnitMessage : ChatWorkUnit
     {
         internal readonly MessageType messageType;
