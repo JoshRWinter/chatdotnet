@@ -72,11 +72,13 @@ namespace chatdotnet
     {
         internal readonly MessageType messageType;
         internal readonly string text;
+        internal readonly byte[] raw;
 
-        internal ChatWorkUnitMessage(MessageType mt, string t) : base(ChatWorkUnitType.Message)
+        internal ChatWorkUnitMessage(MessageType mt, string t, byte[] r) : base(ChatWorkUnitType.Message)
         {
             messageType = mt;
             text = t;
+            raw = r;
         }
     }
 }

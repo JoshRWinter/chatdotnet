@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace chatdotnet
 {
-    public enum MessageType
+    public enum MessageType : byte
     {
         Text,
         Image,
@@ -23,11 +23,12 @@ namespace chatdotnet
     public class Message
     {
         readonly public MessageType type;
-        readonly public long id;
+        readonly public ulong id;
         readonly public string text;
         readonly public string sender;
+        readonly byte[] raw;
 
-        public Message(MessageType t, long i, string e, string s) { type = t; id = i; text = e; sender = s; }
+        public Message(MessageType t, ulong i, string e, string s, byte[] r) { type = t; id = i; text = e; sender = s; raw = r; }
     }
 
     // callbacks
@@ -79,7 +80,7 @@ namespace chatdotnet
         // allow the user to send a message
         public void Message(string text)
         {
-            var unit = new ChatWorkUnitMessage(MessageType.Text, text);
+            var unit = new ChatWorkUnitMessage(MessageType.Text, text, null);
 
             service.AddWork(unit);
         }

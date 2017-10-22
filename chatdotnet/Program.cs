@@ -12,9 +12,40 @@ namespace chatdotnet
         {
             ChatClient client = new ChatClient("chatdb");
 
-            client.Connect("target", " ayy", (success,chats) =>
+            client.Connect("192.168.1.50", "ayy", (success,chats) =>
             {
-                Console.WriteLine("success = " + success);
+                if (!success)
+                    Console.WriteLine("couldn't connect");
+                else
+                {
+                    Console.WriteLine("connected! here are the chats");
+                    foreach(Chat chat in chats)
+                    {
+                        Console.WriteLine("name: " + chat.name + ", created by " + chat.creator);
+                    }
+                }
+
+                // subscribe to the first one
+                if(chats != null)
+                {
+                    client.Subscribe(chats[0].name, (subscribeSuccess, msgs) =>
+                     {
+                         if (!subscribeSuccess)
+                         {
+                             Console.WriteLine("no bueno for subscribo");
+                             return;
+                         }
+
+                         Console.WriteLine("" + msgs.Count + " since you were last connected");
+                         foreach (Message msg in msgs)
+                         {
+                             Console.WriteLine("" + msg.id + " " + msg.sender + ": " + msg.text);
+                         }
+                     }, (msg) =>
+                     {
+                         Console.WriteLine("newmsg " + msg.id + " " + msg.sender + ": " + msg.text);
+                     });
+                }
             });
 
             client.NewChat("coolchat", "this is awsome chat", (success) =>
@@ -22,15 +53,14 @@ namespace chatdotnet
                 Console.WriteLine("new chat success = " + success);
             });
 
-            client.Subscribe("coolchat", (success, msgs) =>
+            string line = "";
+            while(true)
             {
-                Console.WriteLine("subscribe success = " + success);
-            }, (msg) =>
-            {
-                Console.WriteLine("message");
-            });
-
-            client.Message("ayy");
+                line = Console.ReadLine();
+                if (line.Equals("quit"))
+                    break;
+                client.Message(line);
+            }
 
             Console.ReadKey();
             client.Shutdown();
