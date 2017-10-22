@@ -33,6 +33,7 @@ namespace chatdotnet
         private const int CHAT_PORT = 28859;
 
         private Thread serviceThread;
+        private Database db;
 
         private Queue<ChatWorkUnit> units; // work units to be processed
         private Mutex unitsLock; // protects <units>
@@ -45,6 +46,7 @@ namespace chatdotnet
         private BinaryReader tcpin = null;
 
         private string clientname; // the clients name
+        private Chat subscribed; // currently subscribed chat
 
         // callbacks
         private ConnectCallback connectCallback;
@@ -54,6 +56,7 @@ namespace chatdotnet
 
         internal ChatService()
         {
+            db = new Database();
             serviceThread = new Thread(this.Entry);
             units = new Queue<ChatWorkUnit>();
             unitsLock = new Mutex();
@@ -106,6 +109,7 @@ namespace chatdotnet
         {
             Working = false;
             serviceThread.Join();
+            db.Close();
             Console.WriteLine("joined successfully");
         }
 
@@ -247,10 +251,15 @@ namespace chatdotnet
         // process ChatWorkUnitType.Subscribe
         private void ProcessSubscribe(ChatWorkUnitSubscribe unit)
         {
+            subscribed = unit.chat;
+            // add to db
+            db.AddChat(unit.chat);
             subscribeCallback = unit.subscribeCallback;
             msgCallback = unit.msgCallback;
 
-            ClientCmdSubscribe(unit.name, 0);
+            ulong max = db.GetLatest(subscribed);
+
+            ClientCmdSubscribe(unit.chat.name, max);
         }
 
         // process ChatWorkUnitType.Message
@@ -316,13 +325,13 @@ namespace chatdotnet
 
         // subscribe to a chat
         // implements ClientCommand.Subscribe
-        private void ClientCmdSubscribe(string chatname, int latestMessageID)
+        private void ClientCmdSubscribe(string chatname, ulong latestMessageID)
         {
             ClientCommand type = ClientCommand.Subscribe;
             tcpout.Write((byte)type);
 
             SendString(chatname);
-            tcpout.Write((UInt64)latestMessageID);
+            tcpout.Write(latestMessageID);
         }
 
         // send a message
@@ -359,6 +368,8 @@ namespace chatdotnet
         private void ServerCmdListChats()
         {
             string serverName = GetString();
+            db.SetServerName(serverName);
+
             // get the number of chat
             UInt64 count = tcpin.ReadUInt64();
 
@@ -370,7 +381,7 @@ namespace chatdotnet
                 string creator = GetString();
                 string description = GetString();
 
-                list.Add(new Chat(name, creator, description));
+                list.Add(new Chat(id, name, creator, description));
             }
 
             connectCallback(true, list);
@@ -389,6 +400,8 @@ namespace chatdotnet
         // implements ServerCommand.Subscribe
         private void ServerCmdSubscribe()
         {
+            List<Message> stored = db.GetMessages(subscribed);
+
             byte worked = tcpin.ReadByte();
             if (worked != 1)
             {
@@ -411,11 +424,17 @@ namespace chatdotnet
                 if(rawSize > 0)
                     raw = tcpin.ReadBytes((int)rawSize);
 
-                list.Add(new Message(type, id, text, sender, raw));
+                var msg = new Message(type, id, text, sender, raw);
+                list.Add(msg);
+                db.AddMessage(subscribed, msg);
             }
 
-            // notify the user
-            subscribeCallback(true, list);
+            // give the user messages stored locally
+            subscribeCallback(true,stored);
+
+            // give the user new messages
+            foreach(Message msg in list)
+                msgCallback(msg);
         }
 
         // server is sending a message
@@ -431,7 +450,12 @@ namespace chatdotnet
             if (rawSize > 0)
                 raw = tcpin.ReadBytes((int)rawSize);
 
-            msgCallback(new Message(type, id, text, sender, raw));
+            var msg = new Message(type, id, text, sender, raw);
+            // add to the database
+            db.AddMessage(subscribed, msg);
+
+            // tell the user
+            msgCallback(msg);
         }
     }
 }

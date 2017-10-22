@@ -13,11 +13,12 @@ namespace chatdotnet
 
     public class Chat
     {
+        readonly public ulong id;
         readonly public string name;
         readonly public string creator;
         readonly public string description;
 
-        public Chat(string n, string c, string d) { name = n; creator = c; description = d; }
+        public Chat(ulong i, string n, string c, string d) { i = id; name = n; creator = c; description = d; }
     }
 
     public class Message
@@ -26,7 +27,7 @@ namespace chatdotnet
         readonly public ulong id;
         readonly public string text;
         readonly public string sender;
-        readonly byte[] raw;
+        readonly public byte[] raw;
 
         public Message(MessageType t, ulong i, string e, string s, byte[] r) { type = t; id = i; text = e; sender = s; raw = r; }
     }
@@ -70,9 +71,9 @@ namespace chatdotnet
         }
 
         // allow user to subscribe to a chat
-        public void Subscribe(string name, SubscribeCallback sc, MessageCallback mc)
+        public void Subscribe(Chat chat, SubscribeCallback sc, MessageCallback mc)
         {
-            var unit = new ChatWorkUnitSubscribe(name, sc, mc);
+            var unit = new ChatWorkUnitSubscribe(chat, sc, mc);
 
             service.AddWork(unit);
         }

@@ -55,13 +55,13 @@ namespace chatdotnet
     // implements ChatWorkUnit.Subscribe
     class ChatWorkUnitSubscribe : ChatWorkUnit
     {
-        internal readonly string name; // name of chat
+        internal readonly Chat chat;
         internal readonly SubscribeCallback subscribeCallback;
         internal readonly MessageCallback msgCallback;
 
-        internal ChatWorkUnitSubscribe(string n, SubscribeCallback sc, MessageCallback mc) : base(ChatWorkUnitType.Subscribe)
+        internal ChatWorkUnitSubscribe(Chat c, SubscribeCallback sc, MessageCallback mc) : base(ChatWorkUnitType.Subscribe)
         {
-            name = n;
+            chat = c;
             subscribeCallback = sc;
             msgCallback = mc;
         }

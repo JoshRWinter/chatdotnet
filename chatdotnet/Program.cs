@@ -28,7 +28,7 @@ namespace chatdotnet
                 // subscribe to the first one
                 if(chats != null)
                 {
-                    client.Subscribe(chats[0].name, (subscribeSuccess, msgs) =>
+                    client.Subscribe(chats[0], (subscribeSuccess, msgs) =>
                      {
                          if (!subscribeSuccess)
                          {
@@ -36,7 +36,7 @@ namespace chatdotnet
                              return;
                          }
 
-                         Console.WriteLine("" + msgs.Count + " since you were last connected");
+                         Console.WriteLine("already have " + msgs.Count + " messages stored locally. here they are:");
                          foreach (Message msg in msgs)
                          {
                              Console.WriteLine("" + msg.id + " " + msg.sender + ": " + msg.text);
