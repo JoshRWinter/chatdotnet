@@ -18,7 +18,11 @@ namespace chatdotnet
         readonly public string creator;
         readonly public string description;
 
-        public Chat(ulong i, string n, string c, string d) { i = id; name = n; creator = c; description = d; }
+        public Chat(ulong i, string n, string c, string d) { id = i; name = n; creator = c; description = d; }
+        public override string ToString()
+        {
+            return name + " [" + creator + "]";
+        }
     }
 
     public class Message
@@ -42,7 +46,7 @@ namespace chatdotnet
     {
         private ChatService service;
 
-        public ChatClient(string dbname) 
+        public ChatClient() 
         {
             service = new ChatService();
         }
