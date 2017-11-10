@@ -37,10 +37,12 @@ namespace chatdotnet
     }
 
     // callbacks
-    public delegate void ConnectCallback(bool success, List<Chat> chats);
+    public delegate void ConnectCallback(bool success);
+    public delegate void ListChatCallback(List<Chat> chats);
     public delegate void NewChatCallback(bool success);
     public delegate void SubscribeCallback(bool success, List<Message> msgs);
     public delegate void MessageCallback(Message msg);
+    public delegate void MessageReceipt(bool success, string msg);
 
     public class ChatClient
     {
@@ -66,6 +68,14 @@ namespace chatdotnet
             service.AddWork(unit);
         }
 
+        // allow the user to refresh the chat list
+        public void ListChats(ListChatCallback lcc)
+        {
+            var unit = new ChatWorkUnitListChats(lcc);
+
+            service.AddWork(unit);
+        }
+
         // allow the user to make a new chat
         public void NewChat(string name, string description, NewChatCallback newChatCallback)
         {
@@ -83,9 +93,9 @@ namespace chatdotnet
         }
 
         // allow the user to send a message
-        public void Message(string text)
+        public void Message(string text, MessageReceipt callback)
         {
-            var unit = new ChatWorkUnitMessage(MessageType.Text, text, null);
+            var unit = new ChatWorkUnitMessage(MessageType.Text, text, null, callback);
 
             service.AddWork(unit);
         }

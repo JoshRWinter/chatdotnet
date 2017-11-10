@@ -17,16 +17,20 @@ namespace chatdotnet
             NewChat, // client wants to make a new chat
             Subscribe, // client wants to subscribe
             Message, // client wants to send a message
+            GetFile, // client is requesting a file
             Heartbeat // client is sending a heartbeat to the server
         }
 
         // network commands sent from the server
         private enum ServerCommand : System.Byte
         {
+            Introduce, // server is giving client introduction receipt
             ListChats, // server is responding to client request to list chats
             NewChat, // server is sending new chat receipt
             Subscribe, // server is sending subscribe receipt
             Message, // server is sending client a message
+            MessageReceipt, // server is sending message receipt
+            SendFile, // server is sending the client a file
             Heartbeat // server is sending client a heartbeat
         }
 
@@ -50,9 +54,11 @@ namespace chatdotnet
 
         // callbacks
         private ConnectCallback connectCallback;
+        private ListChatCallback listChatCallback;
         private NewChatCallback newChatCallback;
         private SubscribeCallback subscribeCallback;
         private MessageCallback msgCallback;
+        private MessageReceipt msgReceiptCallback;
 
         internal ChatService()
         {
@@ -161,6 +167,9 @@ namespace chatdotnet
                     case ChatWorkUnitType.Connect:
                         ProcessConnect((ChatWorkUnitConnect)unit);
                         break;
+                    case ChatWorkUnitType.ListChats:
+                        ProcessListChats((ChatWorkUnitListChats)unit);
+                        break;
                     case ChatWorkUnitType.NewChat:
                         ProcessNewChat((ChatWorkUnitNewChat)unit);
                         break;
@@ -190,6 +199,9 @@ namespace chatdotnet
 
                 switch (type)
                 {
+                    case ServerCommand.Introduce:
+                        ServerCmdIntroduce();
+                        break;
                     case ServerCommand.ListChats:
                         ServerCmdListChats();
                         break;
@@ -201,6 +213,12 @@ namespace chatdotnet
                         break;
                     case ServerCommand.Message:
                         ServerCmdMessage();
+                        break;
+                    case ServerCommand.SendFile:
+                        // unimplemented
+                        break;
+                    case ServerCommand.MessageReceipt:
+                        ServerCmdMessageReceipt();
                         break;
                     case ServerCommand.Heartbeat:
                         // ignore
@@ -226,15 +244,21 @@ namespace chatdotnet
                 tcpout = new BinaryWriter(tcpstream, Encoding.ASCII);
                 tcpin = new BinaryReader(tcpstream, Encoding.ASCII);
             }
-            catch (SocketException e)
+            catch (SocketException)
             {
                 // notify the client
-                connectCallback(false, null);
+                connectCallback(false);
                 return;
             }
 
             // tell server my name
             ClientCmdIntroduce(unit.name);
+        }
+
+        // process ChatWorkUnitType.ListChats
+        private void ProcessListChats(ChatWorkUnitListChats unit)
+        {
+            listChatCallback = unit.callback;
 
             // ask server for chat list
             ClientCmdListChats();
@@ -265,6 +289,7 @@ namespace chatdotnet
         // process ChatWorkUnitType.Message
         private void ProcessMessage(ChatWorkUnitMessage unit)
         {
+            msgReceiptCallback = unit.callback;
             ClientCmdMessage(unit.messageType, unit.text, unit.raw);
         }
 
@@ -362,6 +387,14 @@ namespace chatdotnet
         /**
          * Command functions implementing enum ServerCommand.*
          */
+
+        // server is sending introduction receipt
+        // implements ServerCommand.Introduce
+        private void ServerCmdIntroduce()
+        {
+            clientname = GetString();
+            connectCallback(true);
+        }
         
         // server is sending a chat list
         // implements ServerCommand.ListChats
@@ -384,7 +417,7 @@ namespace chatdotnet
                 list.Add(new Chat(id, name, creator, description));
             }
 
-            connectCallback(true, list);
+            listChatCallback(list);
         }
 
         // server is sending receipt of new chat
@@ -456,6 +489,21 @@ namespace chatdotnet
 
             // tell the user
             msgCallback(msg);
+        }
+
+        // server is sending receipt of message
+        // implements ServerCommand.MessageReceipt
+        private void ServerCmdMessageReceipt()
+        {
+            byte worked = tcpin.ReadByte();
+            string msg = "";
+            if (worked == 0)
+            {
+                // get the err msg
+                msg = GetString();
+            }
+
+            msgReceiptCallback(worked == 1, msg);
         }
     }
 }

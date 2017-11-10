@@ -31,7 +31,11 @@ namespace chatdotnet
             send = new Button() { Width = 410, Text = "Send", Left = 10, Top = 530 };
             send.Click += (sender, e) =>
             {
-                client.Message(editor.Text);
+                client.Message(editor.Text, (success, msg) =>
+                {
+                    if(!success)
+                        Invoke(new Action<string>(MsgReceipt), msg);
+                });
                 editor.Text = "";
             };
 
@@ -39,17 +43,22 @@ namespace chatdotnet
             if(t != null)
             {
                 client = new ChatClient();
-                List<Chat> chats = Connect(t.Item1, t.Item2);
-                if(chats != null)
+                bool worked = Connect(t.Item1, t.Item2);
+                if(worked != false)
                 {
-                    Chat selected = new SelectChat(chats, AddChat).Exec();
-                    if (selected != null)
+                    List<Chat> chats = ListChats();
+                    if (chats != null)
                     {
-                        stored = Subscribe(selected);
-                    }
-                    else
-                    {
-                        Console.WriteLine("you didn't select anything");
+
+                        Chat selected = new SelectChat(chats, AddChat).Exec();
+                        if (selected != null)
+                        {
+                            stored = Subscribe(selected);
+                        }
+                        else
+                        {
+                            Console.WriteLine("you didn't select anything");
+                        }
                     }
                 }
 
@@ -105,15 +114,15 @@ namespace chatdotnet
             front.Close();
         }
 
-        private List<Chat> Connect(string server, string name)
+        private bool Connect(string server, string name)
         {
+            bool worked = false;
             bool done = false;
-            List<Chat> chats = null;
             Mutex wait = new Mutex();
 
-            ConnectCallback callback = (success, chat) =>
+            ConnectCallback callback = (success) =>
             {
-                chats = success ? chat : null;
+                worked = success;
                 wait.WaitOne();
                 done = true;
                 wait.ReleaseMutex();
@@ -126,6 +135,33 @@ namespace chatdotnet
                 wait.WaitOne();
                 cached = done;
                 wait.ReleaseMutex();
+            } while (!cached);
+
+            return worked;
+        }
+
+        private List<Chat> ListChats()
+        {
+            List<Chat> chats = null;
+            bool done = false;
+            Mutex mutex = new Mutex();
+
+            ListChatCallback callback = (chatList) =>
+            {
+                mutex.WaitOne();
+                chats = chatList;
+                done = true;
+                mutex.ReleaseMutex();
+            };
+
+            client.ListChats(callback);
+
+            bool cached = false;
+            do
+            {
+                mutex.WaitOne();
+                cached = done;
+                mutex.ReleaseMutex();
             } while (!cached);
 
             return chats;
@@ -163,6 +199,11 @@ namespace chatdotnet
         public void ShowMessage(Message msg)
         {
             messageView.Text += "> " + msg.sender + ": " + msg.text + "\r\n";
+        }
+
+        public void MsgReceipt(string msg)
+        {
+            MessageBox.Show(msg);
         }
 
         public void NewMessage(Message msg)

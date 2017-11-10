@@ -5,6 +5,7 @@ namespace chatdotnet
 {
     public enum ChatWorkUnitType{
         Connect, // user wants to connect to a server
+        ListChats, // user wants to refresh the chat list
         NewChat, // user wants to create a new chat
         Subscribe, // user wants to subscribe to a chat
         Message // user wants to send a message
@@ -24,7 +25,6 @@ namespace chatdotnet
     // implements ChatWorkUnit.Connect
     class ChatWorkUnitConnect : ChatWorkUnit
     {
-
         internal readonly string target; // url of server
         internal readonly string name; // name of user
         internal readonly ConnectCallback connectCallback;
@@ -34,6 +34,17 @@ namespace chatdotnet
             target = t;
             name = n;
             connectCallback = cc;
+        }
+    }
+
+    // implements ChatWorkUnit.ListChats
+    class ChatWorkUnitListChats : ChatWorkUnit
+    {
+        internal readonly ListChatCallback callback;
+
+        internal ChatWorkUnitListChats(ListChatCallback lcc) : base(ChatWorkUnitType.ListChats)
+        {
+            callback = lcc;
         }
     }
 
@@ -73,12 +84,14 @@ namespace chatdotnet
         internal readonly MessageType messageType;
         internal readonly string text;
         internal readonly byte[] raw;
+        internal readonly MessageReceipt callback;
 
-        internal ChatWorkUnitMessage(MessageType mt, string t, byte[] r) : base(ChatWorkUnitType.Message)
+        internal ChatWorkUnitMessage(MessageType mt, string t, byte[] r, MessageReceipt cb) : base(ChatWorkUnitType.Message)
         {
             messageType = mt;
             text = t;
             raw = r;
+            callback = cb;
         }
     }
 }
